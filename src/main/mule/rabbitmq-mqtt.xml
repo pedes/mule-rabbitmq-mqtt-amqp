@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:amqp="http://www.mulesoft.org/schema/mule/amqp" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:mqtt3="http://www.mulesoft.org/schema/mule/mqtt3"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/mqtt3 http://www.mulesoft.org/schema/mule/mqtt3/current/mule-mqtt3.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/amqp http://www.mulesoft.org/schema/mule/amqp/current/mule-amqp.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="5a520088-0a73-47ee-9bdc-6999f7f3f908" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<mqtt3:config name="MQTT3_Config" doc:name="MQTT3 Config" doc:id="1f69f4b7-2260-4561-9c8d-1c4b37f671f1" >
+		<mqtt3:form-connection username="mqtt-test" password="mqtt-test" host="localhost" >
+			<mqtt3:client-id-generator >
+				<mqtt3:client-id-random-suffix-generator clientId="polar-2022" />
+			</mqtt3:client-id-generator>
+		</mqtt3:form-connection>
+	</mqtt3:config>
+	<amqp:config name="AMQP_Config" doc:name="AMQP Config" doc:id="0834f9f6-adb2-489c-83a8-3a9e2c5137fb" >
+		<amqp:connection host="localhost" port="5672" username="guest" password="guest" />
+	</amqp:config>
+	<flow name="push-message-queue-mqtt" doc:id="5fff1758-80da-44bf-b512-2367c466a548" >
+		<http:listener doc:name="POST /pushmqtt" doc:id="968d97e5-9629-4817-b623-ea77e27a0f8e" config-ref="HTTP_Listener_config" path="/pushmqtt" allowedMethods="POST"/>
+		<logger level="INFO" doc:name="Log received payload" doc:id="7c6432f0-8892-4d8b-bd5d-5d527a249c43" message="#[payload]"/>
+		<mqtt3:publish doc:name="Publish" doc:id="39aae07a-f196-4529-950b-f6b78e05e957" config-ref="MQTT3_Config" topic='topic.mule' isRetained="true"/>
+		<ee:transform doc:name="Transform Message" doc:id="210deee2-714a-498a-b151-0ad292536253">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"result" : "message delivered"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="push-message-queue-amqp" doc:id="7da48e0f-aba5-49e3-a768-2a4498be6f0b" >
+		<http:listener doc:name="POST /pushamqp" doc:id="0bff4f8b-644a-4c49-878b-a446c81a4cff" config-ref="HTTP_Listener_config" path="/pushamqp" allowedMethods="POST"/>
+		<logger level="INFO" doc:name="Log received payload" doc:id="03049d7b-df9f-4bfb-9ce3-9dbb2ef48c6c" message="#[payload]" />
+		<amqp:publish doc:name="Publish" doc:id="0aae409f-3a5e-4335-8c40-eac4d9212fa9" config-ref="AMQP_Config" exchangeName="topic.mule"/>
+		<ee:transform doc:name="Copy_of_Transform Message" doc:id="70c39b06-f5f0-4252-86c7-dd5c32e2000b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"result" : "message delivered"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
